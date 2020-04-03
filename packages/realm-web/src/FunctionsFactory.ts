@@ -14,8 +14,22 @@ interface CallFunctionBody {
 export interface FunctionsFactoryConfiguration {
     transport: Transport;
     serviceName?: string;
-    cleanArgs?: (args: any[]) => any[];
+    argsTransformation?: (args: any[]) => any[];
     responseTransformation?: (response: any) => any;
+}
+
+// Remove the key for any fields with undefined values
+function cleanArgs(args: any[]) {
+    for (const arg of args) {
+        if (typeof arg === "object") {
+            for (const [key, value] of Object.entries(arg)) {
+                if (value === undefined) {
+                    delete arg[key];
+                }
+            }
+        }
+    }
+    return args;
 }
 
 /**
@@ -24,18 +38,18 @@ export interface FunctionsFactoryConfiguration {
 export class FunctionsFactory {
     private readonly transport: Transport;
     private readonly serviceName?: string;
-    private readonly cleanArgs?: (args: any[]) => any[];
+    private readonly argsTransformation?: (args: any[]) => any[];
     private readonly responseTransformation?: (response: any) => any;
 
     constructor({
         transport,
         serviceName = "",
-        cleanArgs,
+        argsTransformation = cleanArgs,
         responseTransformation
     }: FunctionsFactoryConfiguration) {
         this.transport = transport;
         this.serviceName = serviceName;
-        this.cleanArgs = cleanArgs;
+        this.argsTransformation = argsTransformation;
         this.responseTransformation = responseTransformation;
     }
 
@@ -48,7 +62,9 @@ export class FunctionsFactory {
         // See https://github.com/mongodb/stitch-js-sdk/blob/master/packages/core/sdk/src/services/internal/CoreStitchServiceClientImpl.ts
         const body: CallFunctionBody = {
             name,
-            arguments: this.cleanArgs ? this.cleanArgs(args) : args
+            arguments: this.argsTransformation
+                ? this.argsTransformation(args)
+                : args
         };
         if (this.serviceName) {
             body.service = this.serviceName;
