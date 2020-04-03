@@ -21,7 +21,7 @@ export class App<FF extends Realm.FunctionsFactory> implements Realm.App {
     public readonly functions: FF;
 
     /** Access remote services as members of this services factory. */
-    public readonly services: Realm.Services.ServicesFactory;
+    public readonly services: Realm.Services;
 
     /** Default base url to prefix all requests if no baseUrl is specified in the configuration. */
     public static DEFAULT_BASE_URL = "https://stitch.mongodb.com";
