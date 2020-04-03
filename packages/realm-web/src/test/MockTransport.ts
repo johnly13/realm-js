@@ -14,9 +14,11 @@ export class MockTransport implements Transport {
     }
 
     /** @inheritdoc */
-    public async fetch(request: Request<any>) {
+    public async fetch<RequestBody extends any, ResponseBody extends any>(
+        request: Request<any>
+    ) {
         const { path, ...restOfRequest } = request;
-        return this.networkTransport.fetchAndParse({
+        return this.networkTransport.fetchAndParse<RequestBody, ResponseBody>({
             ...restOfRequest,
             url: this.baseUrl + path
         });
