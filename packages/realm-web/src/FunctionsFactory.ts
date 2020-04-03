@@ -14,6 +14,8 @@ interface CallFunctionBody {
 export interface FunctionsFactoryConfiguration {
     transport: Transport;
     serviceName?: string;
+    cleanArgs?: (args: any[]) => any[];
+    responseTransformation?: (response: any) => any;
 }
 
 /**
@@ -22,13 +24,19 @@ export interface FunctionsFactoryConfiguration {
 export class FunctionsFactory {
     private readonly transport: Transport;
     private readonly serviceName?: string;
+    private readonly cleanArgs?: (args: any[]) => any[];
+    private readonly responseTransformation?: (response: any) => any;
 
     constructor({
         transport,
-        serviceName = ""
+        serviceName = "",
+        cleanArgs,
+        responseTransformation
     }: FunctionsFactoryConfiguration) {
         this.transport = transport;
         this.serviceName = serviceName;
+        this.cleanArgs = cleanArgs;
+        this.responseTransformation = responseTransformation;
     }
 
     /**
@@ -36,17 +44,26 @@ export class FunctionsFactory {
      * @param name Name of the remote function
      * @param args Arguments to pass to the remote function
      */
-    callFunction(name: string, ...args: any[]): Promise<any> {
+    async callFunction(name: string, ...args: any[]): Promise<any> {
         // See https://github.com/mongodb/stitch-js-sdk/blob/master/packages/core/sdk/src/services/internal/CoreStitchServiceClientImpl.ts
-        const body: CallFunctionBody = { name, arguments: args };
+        const body: CallFunctionBody = {
+            name,
+            arguments: this.cleanArgs ? this.cleanArgs(args) : args
+        };
         if (this.serviceName) {
             body.service = this.serviceName;
         }
-        return this.transport.fetch({
+        const response = await this.transport.fetch({
             method: "POST",
             path: "/functions/call",
             body
         });
+        // Transform the response, if needed
+        if (this.responseTransformation) {
+            return this.responseTransformation(response);
+        } else {
+            return response;
+        }
     }
 }
 
